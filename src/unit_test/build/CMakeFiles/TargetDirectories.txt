@@ -1,0 +1,3 @@
+/home/hksong/hksong/prjs/myftpserver/src/unit_test/build/CMakeFiles/servertest.dir
+/home/hksong/hksong/prjs/myftpserver/src/unit_test/build/CMakeFiles/edit_cache.dir
+/home/hksong/hksong/prjs/myftpserver/src/unit_test/build/CMakeFiles/rebuild_cache.dir

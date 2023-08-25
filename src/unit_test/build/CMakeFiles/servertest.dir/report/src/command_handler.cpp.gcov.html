@@ -1,0 +1,773 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - final.info - src/command_handler.cpp</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">src</a> - command_handler.cpp<span style="font-size: 80%;"> (source / <a href="command_handler.cpp.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">final.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">277</td>
+            <td class="headerCovTableEntry">456</td>
+            <td class="headerCovTableEntryLo">60.7 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-08-22 16:37:59</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">26</td>
+            <td class="headerCovTableEntry">34</td>
+            <td class="headerCovTableEntryMed">76.5 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /**</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * @file command_handler.cpp</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * @author songhaikun</a>
+<a name="4"><span class="lineNum">       4 </span>            : */</a>
+<a name="5"><span class="lineNum">       5 </span>            : #include &quot;ace/OS_NS_errno.h&quot;</a>
+<a name="6"><span class="lineNum">       6 </span>            : #include &quot;ace/OS_NS_sys_time.h&quot;</a>
+<a name="7"><span class="lineNum">       7 </span>            : #include &quot;ace/os_include/os_netdb.h&quot;</a>
+<a name="8"><span class="lineNum">       8 </span>            : #include &quot;ace/Log_Msg.h&quot;</a>
+<a name="9"><span class="lineNum">       9 </span>            : #include &quot;ace/INET_Addr.h&quot;</a>
+<a name="10"><span class="lineNum">      10 </span>            : #include &quot;ace/SOCK_Acceptor.h&quot;</a>
+<a name="11"><span class="lineNum">      11 </span>            : #include &quot;ace/Reactor.h&quot;</a>
+<a name="12"><span class="lineNum">      12 </span>            : #include &quot;ace/Acceptor.h&quot;</a>
+<a name="13"><span class="lineNum">      13 </span>            : </a>
+<a name="14"><span class="lineNum">      14 </span>            : #include &quot;command_handler.h&quot;</a>
+<a name="15"><span class="lineNum">      15 </span>            : #include &quot;constants.h&quot;</a>
+<a name="16"><span class="lineNum">      16 </span>            : #include &quot;iostream&quot;</a>
+<a name="17"><span class="lineNum">      17 </span>            : namespace MyFtpServer{</a>
+<a name="18"><span class="lineNum">      18 </span>            :     Task_Manager Command_Handler::task_mgr;</a>
+<a name="19"><span class="lineNum">      19 </span>            : </a>
+<a name="20"><span class="lineNum">      20 </span>            :     typedef void (MyFtpServer::Command_Handler::*Handle_Func)(const MyFtpServer::cmd_info_ &amp;cmds);</a>
+<a name="21"><span class="lineNum">      21 </span>            : </a>
+<a name="22"><span class="lineNum">      22 </span>            :     std::unordered_map&lt;std::string, void (Command_Handler::*)(const cmd_info_&amp; cmds)&gt; handle_cmd_map = {</a>
+<a name="23"><span class="lineNum">      23 </span>            :         </a>
+<a name="24"><span class="lineNum">      24 </span>            :         {&quot;user&quot;, &amp;Command_Handler::handle_user},</a>
+<a name="25"><span class="lineNum">      25 </span>            :         {&quot;syst&quot;, &amp;Command_Handler::handle_syst},</a>
+<a name="26"><span class="lineNum">      26 </span>            :         {&quot;epsv&quot;, &amp;Command_Handler::handle_epsv},</a>
+<a name="27"><span class="lineNum">      27 </span>            :         {&quot;eprt&quot;, &amp;Command_Handler::handle_eprt},</a>
+<a name="28"><span class="lineNum">      28 </span>            :         {&quot;pasv&quot;, &amp;Command_Handler::handle_pasv},</a>
+<a name="29"><span class="lineNum">      29 </span>            :         {&quot;feat&quot;, &amp;Command_Handler::handle_feat},</a>
+<a name="30"><span class="lineNum">      30 </span>            :         {&quot;pwd&quot; , &amp;Command_Handler::handle_pwd},</a>
+<a name="31"><span class="lineNum">      31 </span>            :         {&quot;cwd&quot; , &amp;Command_Handler::handle_cwd},</a>
+<a name="32"><span class="lineNum">      32 </span>            :         {&quot;rmd&quot; , &amp;Command_Handler::handle_rmd},</a>
+<a name="33"><span class="lineNum">      33 </span>            :         {&quot;size&quot;, &amp;Command_Handler::handle_size},</a>
+<a name="34"><span class="lineNum">      34 </span>            :         {&quot;list&quot;, &amp;Command_Handler::handle_list},</a>
+<a name="35"><span class="lineNum">      35 </span>            :         {&quot;quit&quot;, &amp;Command_Handler::handle_quit},</a>
+<a name="36"><span class="lineNum">      36 </span>            :         {&quot;mkd&quot; , &amp;Command_Handler::handle_mkd},</a>
+<a name="37"><span class="lineNum">      37 </span>            :         {&quot;type&quot;, &amp;Command_Handler::handle_type},</a>
+<a name="38"><span class="lineNum">      38 </span>            :         {&quot;retr&quot;, &amp;Command_Handler::handle_retr},</a>
+<a name="39"><span class="lineNum">      39 </span>            :         {&quot;stor&quot;, &amp;Command_Handler::handle_stor},</a>
+<a name="40"><span class="lineNum">      40 </span>            :         {&quot;port&quot;, &amp;Command_Handler::handle_port},</a>
+<a name="41"><span class="lineNum">      41 </span>            :         {&quot;dele&quot;, &amp;Command_Handler::handle_dele},</a>
+<a name="42"><span class="lineNum">      42 </span>            :         {&quot;pass&quot;, &amp;Command_Handler::handle_pass},</a>
+<a name="43"><span class="lineNum">      43 </span>            :         </a>
+<a name="44"><span class="lineNum">      44 </span>            :     };</a>
+<a name="45"><span class="lineNum">      45 </span>            : </a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span><span class="lineCov">         52 :     Command_Handler::Command_Handler(int use_task):</span></a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineCov">         52 :         user_info_(std::make_shared&lt;User_Info&gt;()), </span></a>
+<a name="49"><span class="lineNum">      49 </span><span class="lineCov">         52 :         is_pasv_(false), </span></a>
+<a name="50"><span class="lineNum">      50 </span><span class="lineCov">         52 :         pasv_port_(0),</span></a>
+<a name="51"><span class="lineNum">      51 </span><span class="lineCov">        104 :         data_handler_(nullptr)</span></a>
+<a name="52"><span class="lineNum">      52 </span>            :     {</a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineCov">         52 :         ACE_OS::memset(recv_buffer_, 0, sizeof(recv_buffer_));</span></a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineCov">         52 :         if(1 == use_task) {</span></a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineNoCov">          0 :             task_mgr.activate();</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :             func_to_send_response_ = &amp;Command_Handler::send_response;</span></a>
+<a name="57"><span class="lineNum">      57 </span>            :         } else {</a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineCov">         52 :             func_to_send_response_ = &amp;Command_Handler::send_response_local;</span></a>
+<a name="59"><span class="lineNum">      59 </span>            :         }</a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineCov">         52 :         user_info_-&gt;init_users_map();  //init users map</span></a>
+<a name="61"><span class="lineNum">      61 </span><span class="lineCov">         52 :     }</span></a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineCov">        104 :     Command_Handler::~Command_Handler() {</span></a>
+<a name="63"><span class="lineNum">      63 </span><span class="lineCov">        104 :     }</span></a>
+<a name="64"><span class="lineNum">      64 </span>            : </a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineCov">         16 :     int Command_Handler::get_real_path(std::string&amp; para_path) {</span></a>
+<a name="66"><span class="lineNum">      66 </span><span class="lineCov">         16 :         int len = para_path.size();</span></a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineCov">         16 :         if(0 == len) {</span></a>
+<a name="68"><span class="lineNum">      68 </span><span class="lineNoCov">          0 :             para_path = user_info_-&gt;get_current_dir();</span></a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineNoCov">          0 :             return GET_REAL_PATH;</span></a>
+<a name="70"><span class="lineNum">      70 </span>            :         }</a>
+<a name="71"><span class="lineNum">      71 </span><span class="lineCov">         16 :         if('/' != para_path[len - 1]) {</span></a>
+<a name="72"><span class="lineNum">      72 </span><span class="lineCov">         16 :             para_path += &quot;/&quot;;</span></a>
+<a name="73"><span class="lineNum">      73 </span>            :         }</a>
+<a name="74"><span class="lineNum">      74 </span><span class="lineCov">         16 :         std::string old_path = user_info_-&gt;get_current_dir();</span></a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineCov">         16 :         int len_old = old_path.size();</span></a>
+<a name="76"><span class="lineNum">      76 </span>            : </a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineCov">         16 :         if('/' != old_path[len_old - 1]) old_path += &quot;/&quot;;</span></a>
+<a name="78"><span class="lineNum">      78 </span>            : </a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineCov">         16 :         if('/' != para_path[0]) {  //相对路径</span></a>
+<a name="80"><span class="lineNum">      80 </span><span class="lineCov">         16 :             para_path = old_path + para_path;</span></a>
+<a name="81"><span class="lineNum">      81 </span>            :         }</a>
+<a name="82"><span class="lineNum">      82 </span>            : </a>
+<a name="83"><span class="lineNum">      83 </span>            :         // 接着循环处理，遇到/.remove，遇到/..回退</a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineCov">         16 :         len = para_path.size();</span></a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineCov">         16 :         std::string path_t = &quot;&quot;;</span></a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineCov">         16 :         bool parse_success = true;</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineCov">        632 :         for(int i = 0; i &lt; len; i++){</span></a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineCov">        616 :             if('/' != para_path[i]) {</span></a>
+<a name="89"><span class="lineNum">      89 </span><span class="lineCov">        516 :                 path_t += para_path[i];</span></a>
+<a name="90"><span class="lineNum">      90 </span>            :             } else {</a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineCov">        100 :                 if(i + 1 &lt; len ) {</span></a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineCov">         84 :                     if('.' != para_path[i + 1]) {</span></a>
+<a name="93"><span class="lineNum">      93 </span><span class="lineCov">         74 :                         path_t += para_path[i];</span></a>
+<a name="94"><span class="lineNum">      94 </span>            :                     } else { // '/'+'.'</a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineCov">         10 :                         if(i + 2 &lt; len) {</span></a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineCov">         10 :                             if('.' != para_path[i + 2]) {</span></a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineCov">          4 :                                 if('/' == para_path[i + 2]) {  //like /./</span></a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineCov">          4 :                                     i = i + 1;</span></a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineCov">          4 :                                     continue;</span></a>
+<a name="100"><span class="lineNum">     100 </span>            :                                 }else {</a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :                                     path_t += para_path[i]; //like /.abc</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :                                     continue;</span></a>
+<a name="103"><span class="lineNum">     103 </span>            :                                 }</a>
+<a name="104"><span class="lineNum">     104 </span>            :                             } else {</a>
+<a name="105"><span class="lineNum">     105 </span>            :                                 //like /..</a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineCov">          6 :                                 i = i + 2;</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineCov">         54 :                                 while(1 &lt; path_t.size()){ //不断弹出直至'/'</span></a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineCov">         54 :                                     char c = path_t.back();</span></a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineCov">         54 :                                     path_t.pop_back();</span></a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineCov">         54 :                                     if('/' == c) {</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineCov">          6 :                                         break;</span></a>
+<a name="112"><span class="lineNum">     112 </span>            :                                     }</a>
+<a name="113"><span class="lineNum">     113 </span>            :                                 }</a>
+<a name="114"><span class="lineNum">     114 </span>            :                             }</a>
+<a name="115"><span class="lineNum">     115 </span>            :                         } else {</a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineNoCov">          0 :                             break;</span></a>
+<a name="117"><span class="lineNum">     117 </span>            :                         }</a>
+<a name="118"><span class="lineNum">     118 </span>            :                     }</a>
+<a name="119"><span class="lineNum">     119 </span>            :                 } else { // '/'为最后一个字符</a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineCov">         16 :                     path_t += para_path[i];</span></a>
+<a name="121"><span class="lineNum">     121 </span>            :                 }</a>
+<a name="122"><span class="lineNum">     122 </span>            :             }</a>
+<a name="123"><span class="lineNum">     123 </span>            :         }</a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineCov">         16 :         para_path = path_t;</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineCov">         16 :         return GET_REAL_PATH;</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineCov">         16 :     }</span></a>
+<a name="127"><span class="lineNum">     127 </span>            : </a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineCov">        156 :     std::string Command_Handler::get_and_clear_response_list() {</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineCov">        156 :         std::string res = &quot;&quot;;</span></a>
+<a name="130"><span class="lineNum">     130 </span><span class="lineCov">        364 :         while(!response_list_.empty()) {</span></a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineCov">        208 :             res += response_list_.front();</span></a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineCov">        208 :             response_list_.pop_front();</span></a>
+<a name="133"><span class="lineNum">     133 </span>            :         }</a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineCov">        156 :         return res;</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :     }</span></a>
+<a name="136"><span class="lineNum">     136 </span>            : </a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :     int Command_Handler::send_response(const char *msg){</span></a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineNoCov">          0 :         char send_buf[MAX_COMMAND_BUFFER_SIZE] = {0};</span></a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :         strncpy(send_buf, msg, strlen(msg));</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :         int send_len = this-&gt;peer().send(send_buf, strlen(send_buf));</span></a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 :         ACE_DEBUG ((LM_DEBUG,  ACE_TEXT (&quot;send response: %*s&quot;), strlen(send_buf) - 2, send_buf));</span></a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineNoCov">          0 :         return (send_len == strlen(send_buf)) ? 0 : 1;</span></a>
+<a name="143"><span class="lineNum">     143 </span>            :     }</a>
+<a name="144"><span class="lineNum">     144 </span>            : </a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineCov">        208 :     int Command_Handler::send_response_local(const char *msg){</span></a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineCov">        208 :         response_list_.emplace_back(msg);</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineCov">        208 :         return (strlen(msg) &gt; 0) ? 1 : 0;</span></a>
+<a name="148"><span class="lineNum">     148 </span>            :     }</a>
+<a name="149"><span class="lineNum">     149 </span>            : </a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineCov">         62 :     void Command_Handler::handle_user(const cmd_info_&amp; cmds) {</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineCov">         62 :         std::string username = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineCov">         62 :         if(NO_SUCH_USERNAME == user_info_-&gt;check_username(username) || !user_info_-&gt;set_username(username)) {</span></a>
+<a name="153"><span class="lineNum">     153 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_530_LOGIN_FAILED); //o</span></a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineCov">          2 :             return ;</span></a>
+<a name="155"><span class="lineNum">     155 </span>            :         }</a>
+<a name="156"><span class="lineNum">     156 </span><span class="lineCov">         60 :         (this-&gt;*func_to_send_response_)(COMMAND_331); //o</span></a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineCov">         62 :     }</span></a>
+<a name="158"><span class="lineNum">     158 </span>            : </a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineCov">         58 :     void Command_Handler::handle_pass(const cmd_info_&amp; cmds) {</span></a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineCov">         58 :         if(0 != chdir(&quot;/home/hksong/hksong/ftp_home/&quot;)){</span></a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineCov">          2 :             return ;</span></a>
+<a name="162"><span class="lineNum">     162 </span>            :         }</a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineCov">         58 :         std::string password = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="164"><span class="lineNum">     164 </span>            :         // std::string username = user_info_-&gt;get_username();</a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineCov">         58 :         int res = user_info_-&gt;check_user(user_info_-&gt;get_username(), password);</span></a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineCov">         58 :         if(NO_SUCH_USERNAME == res || USER_PASSWORD_WRONG == res) {</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_530_LOGIN_FAILED);</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineCov">          2 :             return ;</span></a>
+<a name="169"><span class="lineNum">     169 </span>            :         }</a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineCov">         56 :         user_info_-&gt;login();</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineCov">         56 :         (this-&gt;*func_to_send_response_)(COMMAND_230);</span></a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineCov">         58 :     }</span></a>
+<a name="173"><span class="lineNum">     173 </span>            : </a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineCov">          2 :     void Command_Handler::handle_syst(const cmd_info_&amp; cmds) {</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(COMMAND_215);</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineCov">          2 :     }</span></a>
+<a name="177"><span class="lineNum">     177 </span>            : </a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineCov">          2 :     void Command_Handler::handle_epsv(const cmd_info_&amp; cmds) {</span></a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(COMMAND_550_NOT_SUPPORT);  //TODO: need support</span></a>
+<a name="181"><span class="lineNum">     181 </span>            :     }</a>
+<a name="182"><span class="lineNum">     182 </span>            : </a>
+<a name="183"><span class="lineNum">     183 </span>            : </a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineCov">          2 :     void Command_Handler::handle_eprt(const cmd_info_&amp; cmds) {</span></a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(COMMAND_550_NOT_SUPPORT);  //TODO: need support</span></a>
+<a name="187"><span class="lineNum">     187 </span>            :     }</a>
+<a name="188"><span class="lineNum">     188 </span>            : </a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineCov">          2 :     void Command_Handler::handle_pasv(const cmd_info_&amp; cmds) {</span></a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineCov">          2 :         if(!is_pasv_) {</span></a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineCov">          2 :             ACE_INET_Addr local_addr;</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineCov">          2 :             local_addr.set((u_short)0, (ACE_UINT32) INADDR_ANY);</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineCov">          2 :             if(pasv_acceptor_.open(local_addr) &lt; 0) {</span></a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :                 ACE_DEBUG ( (LM_DEBUG, &quot;open pasv port failed\n&quot;));</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :                 (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :                 return ;</span></a>
+<a name="198"><span class="lineNum">     198 </span>            :             }</a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineCov">          2 :             pasv_acceptor_.get_local_addr(local_addr);</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineCov">          2 :             ACE_DEBUG ( (LM_DEBUG, &quot;open port: %d\n&quot;, local_addr.get_port_number ()));</span></a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineCov">          2 :             pasv_port_ = local_addr.get_port_number();</span></a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineCov">          2 :             is_pasv_ = true;</span></a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineCov">          2 :         }</span></a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineCov">          2 :         if(data_handler_){</span></a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :             data_handler_.reset();</span></a>
+<a name="206"><span class="lineNum">     206 </span>            :         }</a>
+<a name="207"><span class="lineNum">     207 </span>            :         </a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineCov">          2 :         data_handler_ = std::unique_ptr&lt;Data_Handler&gt;(new Data_Handler(data_type_));</span></a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineCov">          2 :         u_short high_byte = pasv_port_ &gt;&gt; 8;</span></a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineCov">          2 :         u_short low_byte = pasv_port_ &amp; 0x00ff;</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineCov">          2 :         std::stringstream pasv_address_ss;</span></a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineCov">          2 :         pasv_address_ss &lt;&lt; HOST_ADDRESS &lt;&lt; ',' &lt;&lt; high_byte &lt;&lt; ',' &lt;&lt; low_byte;</span></a>
+<a name="213"><span class="lineNum">     213 </span><span class="lineCov">          4 :         std::string res = COMMAND_227_BEGIN + pasv_address_ss.str() + COMMAND_227_END;</span></a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(res.c_str());</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineCov">          2 :     }</span></a>
+<a name="216"><span class="lineNum">     216 </span>            : </a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineCov">          2 :     void Command_Handler::handle_feat(const cmd_info_&amp; cmds) {</span></a>
+<a name="218"><span class="lineNum">     218 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(COMMAND_211);</span></a>
+<a name="220"><span class="lineNum">     220 </span>            :     }</a>
+<a name="221"><span class="lineNum">     221 </span>            : </a>
+<a name="222"><span class="lineNum">     222 </span><span class="lineCov">          4 :     void Command_Handler::handle_pwd(const cmd_info_&amp; cmds) {</span></a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineCov">          4 :         CHECK_LOGGING();</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineCov">          8 :         std::string response_pwd = COMMAND_257_PWD_BEIGN + user_info_-&gt;get_current_dir() + COMMAND_257_PWD_BEIGN_END;</span></a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineCov">          4 :         (this-&gt;*func_to_send_response_)(response_pwd.c_str());</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineCov">          4 :     }</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineCov">          2 :     void Command_Handler::handle_cwd(const cmd_info_&amp; cmds) {</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineCov">          2 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="230"><span class="lineNum">     230 </span><span class="lineCov">          2 :         if(GET_REAL_PATH == get_real_path(new_path) &amp;&amp; 0 == chdir(new_path.c_str()) </span></a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineCov">          4 :             &amp;&amp; user_info_-&gt;set_current_dir(new_path)){</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_250_CWD_SUCCESS);</span></a>
+<a name="233"><span class="lineNum">     233 </span>            :         }</a>
+<a name="234"><span class="lineNum">     234 </span>            :         else{</a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_550_CWD_FAILED);</span></a>
+<a name="236"><span class="lineNum">     236 </span>            :         }</a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineCov">          2 :     }</span></a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineCov">          2 :     void Command_Handler::handle_mkd(const cmd_info_&amp; cmds) {</span></a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineCov">          4 :         CHECK_LOGGING();</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineCov">          2 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineCov">          2 :         if(GET_REAL_PATH == get_real_path(new_path) &amp;&amp; (ACE_OS::mkdir(new_path.c_str())&gt;= 0 )) {</span></a>
+<a name="242"><span class="lineNum">     242 </span>            :             //创建dir</a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_257_MKD_SUCCESS);</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineCov">          2 :             return ;</span></a>
+<a name="245"><span class="lineNum">     245 </span>            :         }</a>
+<a name="246"><span class="lineNum">     246 </span><span class="lineNoCov">          0 :         (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="247"><span class="lineNum">     247 </span><span class="lineCov">          2 :     }</span></a>
+<a name="248"><span class="lineNum">     248 </span>            : </a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineNoCov">          0 :     void Command_Handler::handle_dele(const cmd_info_&amp; cmds) {</span></a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :         CHECK_LOGGING();</span></a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineNoCov">          0 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="252"><span class="lineNum">     252 </span>            :         struct stat buffer;</a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineNoCov">          0 :         if(GET_REAL_PATH == get_real_path(new_path) </span></a>
+<a name="254"><span class="lineNum">     254 </span><span class="lineNoCov">          0 :             &amp;&amp; ACE_OS::stat(new_path.c_str(), &amp;buffer) == 0 </span></a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :             &amp;&amp; std::remove(new_path.c_str()) == 0) </span></a>
+<a name="256"><span class="lineNum">     256 </span>            :             {</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_250_DELE_SUCCESS);</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :             return ;</span></a>
+<a name="259"><span class="lineNum">     259 </span>            :         }</a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 :         (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :     }</span></a>
+<a name="262"><span class="lineNum">     262 </span>            : </a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineCov">          2 :     void Command_Handler::handle_rmd(const cmd_info_&amp; cmds) {</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineCov">          4 :         CHECK_LOGGING();</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineCov">          2 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineCov">          2 :         if(GET_REAL_PATH == get_real_path(new_path)) {</span></a>
+<a name="267"><span class="lineNum">     267 </span>            :             struct stat buffer;</a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineCov">          2 :             if(ACE_OS::stat(new_path.c_str(), &amp;buffer) != 0 </span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineCov">          2 :                             || (buffer.st_mode &amp; S_IFMT) != S_IFDIR </span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineCov">          4 :                             || ACE_OS::rmdir(new_path.c_str()) != 0) {</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :                 (this-&gt;*func_to_send_response_)(COMMAND_550_RMD_FAILED);</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :                 return ;</span></a>
+<a name="273"><span class="lineNum">     273 </span>            :             }</a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_250_DELE_SUCCESS);</span></a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineCov">          2 :             return;</span></a>
+<a name="276"><span class="lineNum">     276 </span>            :         }</a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineCov">          2 :     }</span></a>
+<a name="278"><span class="lineNum">     278 </span>            : </a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineCov">          2 :     void Command_Handler::handle_size(const cmd_info_&amp; cmds) {</span></a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineCov">          2 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="282"><span class="lineNum">     282 </span>            :         </a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineCov">          2 :         if(GET_REAL_PATH == get_real_path(new_path)) {</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineCov">          2 :             new_path.pop_back();</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineCov">          2 :             struct stat s{};</span></a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineCov">          2 :             if(-1 == lstat(new_path.c_str(), &amp;s)) {</span></a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineNoCov">          0 :                 perror(&quot;lstat&quot;);</span></a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :                 (this-&gt;*func_to_send_response_)(COMMAND_550_SIZE_FAILED);</span></a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :                 return;</span></a>
+<a name="290"><span class="lineNum">     290 </span>            :             }</a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineCov">          4 :             std::string res = &quot;213 &quot; + std::to_string(s.st_size) + &quot;\r\n&quot;;</span></a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(res.c_str());</span></a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineCov">          2 :         } else {</span></a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_550_SIZE_FAILED);</span></a>
+<a name="295"><span class="lineNum">     295 </span>            :         }</a>
+<a name="296"><span class="lineNum">     296 </span>            :         </a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineCov">          2 :     }</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineCov">          2 :     void Command_Handler::list_dir(std::list&lt;std::string&gt;&amp; list, const char* new_path, DIR* dir) {</span></a>
+<a name="299"><span class="lineNum">     299 </span><span class="lineCov">          2 :         list.emplace_back(</span></a>
+<a name="300"><span class="lineNum">     300 </span>            :             &quot;文件类型    链接数 uid     gid          大小    日期       文件名\r\n&quot;);</a>
+<a name="301"><span class="lineNum">     301 </span>            :         struct dirent *dentry;</a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineCov">         16 :         while((dentry = readdir(dir)) != nullptr) {</span></a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineCov">         14 :             char absolute_path[2048] = {0};</span></a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineCov">         14 :             ACE_OS::snprintf(absolute_path, sizeof(absolute_path), &quot;%s/%s&quot;, </span></a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineCov">         14 :                              new_path, dentry-&gt;d_name);</span></a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineCov">         14 :             struct stat s{};</span></a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineCov">         14 :             if(-1 == lstat(absolute_path, &amp;s)) {</span></a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :                 perror(&quot;lstat&quot;);</span></a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineCov">          4 :                 continue;</span></a>
+<a name="310"><span class="lineNum">     310 </span>            :             }</a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineCov">         14 :             if(0 == strcmp(dentry-&gt;d_name, &quot;.&quot;) || 0 == strcmp(dentry-&gt;d_name, &quot;..&quot;)) {</span></a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineCov">          4 :                 continue;</span></a>
+<a name="313"><span class="lineNum">     313 </span>            :             }</a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineCov">         10 :             char perm[] = &quot;----------&quot;;</span></a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineCov">         10 :             mode_t mode = s.st_mode &amp; S_IFMT;</span></a>
+<a name="316"><span class="lineNum">     316 </span><span class="lineCov">         10 :             switch (mode) {</span></a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineCov">          6 :             case S_IFREG:</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineCov">          6 :                 perm[0] = '-';</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineCov">          6 :                 break;</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineCov">          4 :             case S_IFDIR:</span></a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineCov">          4 :                 perm[0] = 'd';</span></a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineCov">          4 :                 break;</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :             case S_IFLNK:</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :                 perm[0] = 'l';</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :             case S_IFIFO:</span></a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :                 perm[0] = 'p';</span></a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :             case S_IFSOCK:</span></a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineNoCov">          0 :                 perm[0] = 's';</span></a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :             case S_IFCHR:</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :                 perm[0] = 'c';</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :             case S_IFBLK:</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 :                 perm[0] = 'b';</span></a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :             default:</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineNoCov">          0 :                 perm[0] = '?';</span></a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="341"><span class="lineNum">     341 </span>            :             }</a>
+<a name="342"><span class="lineNum">     342 </span>            : </a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IRUSR) {</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineCov">         10 :                 perm[1] = 'r';</span></a>
+<a name="345"><span class="lineNum">     345 </span>            :             }</a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IWUSR) {</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineCov">         10 :                 perm[2] = 'w';</span></a>
+<a name="348"><span class="lineNum">     348 </span>            :             }</a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IXUSR) {</span></a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineCov">          4 :                 perm[3] = 'x';</span></a>
+<a name="351"><span class="lineNum">     351 </span>            :             }</a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IRGRP) {</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineCov">         10 :                 perm[4] = 'r';</span></a>
+<a name="354"><span class="lineNum">     354 </span>            :             }</a>
+<a name="355"><span class="lineNum">     355 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IWGRP) {</span></a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineCov">          8 :                 perm[5] = 'w';</span></a>
+<a name="357"><span class="lineNum">     357 </span>            :             }</a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IXGRP) {</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineCov">          4 :                 perm[6] = 'x';</span></a>
+<a name="360"><span class="lineNum">     360 </span>            :             }</a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IROTH) {</span></a>
+<a name="362"><span class="lineNum">     362 </span><span class="lineCov">         10 :                 perm[7] = 'r';</span></a>
+<a name="363"><span class="lineNum">     363 </span>            :             }</a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IWOTH) {</span></a>
+<a name="365"><span class="lineNum">     365 </span><span class="lineNoCov">          0 :                 perm[8] = 'w';</span></a>
+<a name="366"><span class="lineNum">     366 </span>            :             }</a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_IXOTH) {</span></a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineCov">          4 :                 perm[9] = 'x';</span></a>
+<a name="369"><span class="lineNum">     369 </span>            :             }</a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_ISUID) {</span></a>
+<a name="371"><span class="lineNum">     371 </span><span class="lineNoCov">          0 :                 perm[3] = perm[3] == 'x' ? 's' : 'S';</span></a>
+<a name="372"><span class="lineNum">     372 </span>            :             }</a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_ISGID) {</span></a>
+<a name="374"><span class="lineNum">     374 </span><span class="lineNoCov">          0 :                 perm[6] = perm[6] == 'x' ? 's' : 'S';</span></a>
+<a name="375"><span class="lineNum">     375 </span>            :             }</a>
+<a name="376"><span class="lineNum">     376 </span><span class="lineCov">         10 :             if (s.st_mode &amp; S_ISVTX) {</span></a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineNoCov">          0 :                 perm[9] = perm[9] == 'x' ? 't' : 'T';</span></a>
+<a name="378"><span class="lineNum">     378 </span>            :             }</a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineCov">         10 :             int offset = 0;</span></a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineCov">         10 :             char buf[2048] = {0};</span></a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineCov">         10 :             offset += ACE_OS::snprintf(buf, sizeof(buf), &quot;%s &quot;, perm);</span></a>
+<a name="382"><span class="lineNum">     382 </span><span class="lineCov">         10 :             offset +=</span></a>
+<a name="383"><span class="lineNum">     383 </span><span class="lineCov">         10 :                     ACE_OS::snprintf(buf + offset, sizeof(buf), &quot;%3lu %-8d %-8d &quot;,</span></a>
+<a name="384"><span class="lineNum">     384 </span>            :                                     s.st_nlink, s.st_uid, s.st_gid);</a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineCov">         10 :             offset += ACE_OS::snprintf(buf + offset, sizeof(buf), &quot;%8lu &quot;,</span></a>
+<a name="386"><span class="lineNum">     386 </span>            :                                     s.st_size);</a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineCov">         10 :             struct timeval tv{};</span></a>
+<a name="388"><span class="lineNum">     388 </span><span class="lineCov">         10 :             ::gettimeofday(&amp;tv, NULL);</span></a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineCov">         30 :             const char* format = (s.st_mtime &gt; tv.tv_sec ||</span></a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineCov">         10 :                                   tv.tv_sec - s.st_mtime &gt; 365 / 2 * 24 * 60 * 60)</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineCov">         20 :                                     ? &quot;%b %e %H:%M&quot;</span></a>
+<a name="392"><span class="lineNum">     392 </span>            :                                     : &quot;%b %e  %Y&quot;;</a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineCov">         10 :             struct tm* tm_ptr = localtime(&amp;tv.tv_sec);</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineCov">         10 :             char date[64] = {0};</span></a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineCov">         10 :             strftime(date, sizeof(date), format, tm_ptr);</span></a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineCov">         10 :             offset += ACE_OS::snprintf(buf + offset, sizeof(buf), &quot;%s &quot;, date);</span></a>
+<a name="397"><span class="lineNum">     397 </span><span class="lineCov">         10 :             if (S_ISLNK(s.st_mode)) {</span></a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :                 char src_path[1024] = {0};</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :                 ssize_t ret = readlink(absolute_path, src_path, sizeof(src_path));</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :                 if (ret == -1) {</span></a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :                     perror(&quot;readlink&quot;);</span></a>
+<a name="402"><span class="lineNum">     402 </span>            :                 }</a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineNoCov">          0 :                 ACE_OS::snprintf(buf + offset, sizeof(buf), &quot;%s -&gt; %s\r\n&quot;,</span></a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :                                 dentry-&gt;d_name, src_path);</span></a>
+<a name="405"><span class="lineNum">     405 </span>            :             } else {</a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineCov">         10 :                 ACE_OS::snprintf(buf + offset, sizeof(buf), &quot;%s\r\n&quot;, dentry-&gt;d_name);</span></a>
+<a name="407"><span class="lineNum">     407 </span>            :             }</a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineCov">         10 :             list.emplace_back(buf);</span></a>
+<a name="409"><span class="lineNum">     409 </span>            :             // list_ans += std::string(dentry-&gt;d_name);</a>
+<a name="410"><span class="lineNum">     410 </span>            :         }</a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineCov">          2 :     }</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :     int Command_Handler::make_data_connection ()</span></a>
+<a name="413"><span class="lineNum">     413 </span>            :     {</a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :         if(is_pasv_)</span></a>
+<a name="415"><span class="lineNum">     415 </span>            :         {</a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineNoCov">          0 :             if (pasv_acceptor_.accept(data_handler_-&gt;get_data_link()) &lt; 0)</span></a>
+<a name="417"><span class="lineNum">     417 </span>            :             {</a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :                 ACE_DEBUG ( (LM_DEBUG, &quot;pasv accept failed\n&quot;));</span></a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :                 return -1;</span></a>
+<a name="420"><span class="lineNum">     420 </span>            :             }</a>
+<a name="421"><span class="lineNum">     421 </span><span class="lineNoCov">          0 :             ACE_DEBUG ( (LM_DEBUG, &quot;pasv connection succeed.\n&quot;));</span></a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :             return 0;</span></a>
+<a name="423"><span class="lineNum">     423 </span>            :         }</a>
+<a name="424"><span class="lineNum">     424 </span>            :         else</a>
+<a name="425"><span class="lineNum">     425 </span>            :         {</a>
+<a name="426"><span class="lineNum">     426 </span><span class="lineNoCov">          0 :             return data_handler_-&gt;data_link_init();</span></a>
+<a name="427"><span class="lineNum">     427 </span>            :         }</a>
+<a name="428"><span class="lineNum">     428 </span>            :         </a>
+<a name="429"><span class="lineNum">     429 </span>            :     }</a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :     void Command_Handler::handle_list(const cmd_info_&amp; cmds) {</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :         CHECK_LOGGING();</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineNoCov">          0 :         DIR* dir = nullptr;</span></a>
+<a name="434"><span class="lineNum">     434 </span>            : </a>
+<a name="435"><span class="lineNum">     435 </span><span class="lineNoCov">          0 :         if(GET_REAL_PATH_FAILED == get_real_path(new_path) || (dir = opendir(new_path.c_str())) == nullptr) {</span></a>
+<a name="436"><span class="lineNum">     436 </span>            :             //TODO:send_respond</a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineNoCov">          0 :             return;</span></a>
+<a name="438"><span class="lineNum">     438 </span>            :         }</a>
+<a name="439"><span class="lineNum">     439 </span>            :         //open success</a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :         if (make_data_connection () == -1)</span></a>
+<a name="441"><span class="lineNum">     441 </span>            :         {</a>
+<a name="442"><span class="lineNum">     442 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_425_DATA_CONN_FAILED);</span></a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 :             return ;</span></a>
+<a name="444"><span class="lineNum">     444 </span>            :         }</a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineNoCov">          0 :         (this-&gt;*func_to_send_response_)(COMMAND_150);</span></a>
+<a name="446"><span class="lineNum">     446 </span><span class="lineNoCov">          0 :         std::list&lt;std::string&gt; list;</span></a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineNoCov">          0 :         list_dir(list,new_path.c_str(), dir);</span></a>
+<a name="448"><span class="lineNum">     448 </span><span class="lineNoCov">          0 :         closedir(dir);</span></a>
+<a name="449"><span class="lineNum">     449 </span>            : </a>
+<a name="450"><span class="lineNum">     450 </span><span class="lineNoCov">          0 :         for(const std::string&amp; str : list) {</span></a>
+<a name="451"><span class="lineNum">     451 </span><span class="lineNoCov">          0 :             data_handler_-&gt;get_data_link().send(str.c_str(),str.size());</span></a>
+<a name="452"><span class="lineNum">     452 </span><span class="lineNoCov">          0 :             data_handler_-&gt;get_data_link().send(&quot;\r\n&quot;, sizeof &quot;\r\n&quot;);</span></a>
+<a name="453"><span class="lineNum">     453 </span>            :         }</a>
+<a name="454"><span class="lineNum">     454 </span>            : </a>
+<a name="455"><span class="lineNum">     455 </span><span class="lineNoCov">          0 :         data_handler_.reset();</span></a>
+<a name="456"><span class="lineNum">     456 </span><span class="lineNoCov">          0 :         (this-&gt;*func_to_send_response_)(COMMAND_226_LIST_OK);</span></a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :         return;</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :     }</span></a>
+<a name="459"><span class="lineNum">     459 </span><span class="lineCov">         54 :     void Command_Handler::handle_quit(const cmd_info_&amp; cmds) {</span></a>
+<a name="460"><span class="lineNum">     460 </span><span class="lineCov">         54 :         user_info_-&gt;logout();</span></a>
+<a name="461"><span class="lineNum">     461 </span><span class="lineCov">         54 :         (this-&gt;*func_to_send_response_)(COMMAND_221);</span></a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineCov">         54 :     }</span></a>
+<a name="463"><span class="lineNum">     463 </span>            :     </a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineCov">          2 :     void Command_Handler::handle_type(const cmd_info_&amp; cmds) {</span></a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="466"><span class="lineNum">     466 </span><span class="lineCov">          2 :         std::string para = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineCov">          2 :         char type = para[0];</span></a>
+<a name="468"><span class="lineNum">     468 </span><span class="lineCov">          2 :         ACE_DEBUG ( (LM_DEBUG, &quot;type is %c\n&quot;,type));</span></a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineCov">          2 :         switch(type) {</span></a>
+<a name="470"><span class="lineNum">     470 </span><span class="lineNoCov">          0 :         case 'I':</span></a>
+<a name="471"><span class="lineNum">     471 </span>            :         case 'i':</a>
+<a name="472"><span class="lineNum">     472 </span><span class="lineNoCov">          0 :             data_type_ = Data_Types::IMAGE;</span></a>
+<a name="473"><span class="lineNum">     473 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="474"><span class="lineNum">     474 </span><span class="lineCov">          2 :         case 'A':</span></a>
+<a name="475"><span class="lineNum">     475 </span>            :         case 'a':</a>
+<a name="476"><span class="lineNum">     476 </span><span class="lineCov">          2 :             data_type_ = Data_Types::ASCII;</span></a>
+<a name="477"><span class="lineNum">     477 </span><span class="lineCov">          2 :             break;</span></a>
+<a name="478"><span class="lineNum">     478 </span><span class="lineNoCov">          0 :         default:</span></a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="480"><span class="lineNum">     480 </span><span class="lineNoCov">          0 :             return;</span></a>
+<a name="481"><span class="lineNum">     481 </span>            :         }</a>
+<a name="482"><span class="lineNum">     482 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(COMMAND_SUCCESS);</span></a>
+<a name="483"><span class="lineNum">     483 </span><span class="lineCov">          2 :         return ;</span></a>
+<a name="484"><span class="lineNum">     484 </span><span class="lineCov">          2 :     }</span></a>
+<a name="485"><span class="lineNum">     485 </span>            : </a>
+<a name="486"><span class="lineNum">     486 </span><span class="lineCov">          2 :     void Command_Handler::handle_retr(const cmd_info_&amp; cmds) {</span></a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineCov">          2 :         if(!data_handler_) {</span></a>
+<a name="489"><span class="lineNum">     489 </span><span class="lineCov">          2 :             ACE_DEBUG ((LM_DEBUG, &quot;data link not set.\n&quot;));</span></a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="491"><span class="lineNum">     491 </span><span class="lineCov">          2 :             return ;</span></a>
+<a name="492"><span class="lineNum">     492 </span>            :         }</a>
+<a name="493"><span class="lineNum">     493 </span><span class="lineNoCov">          0 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 :         if(GET_REAL_PATH == get_real_path(new_path)) {</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :             new_path.pop_back(); //去掉'/'</span></a>
+<a name="496"><span class="lineNum">     496 </span><span class="lineNoCov">          0 :             data_handler_-&gt;set_file_path (new_path);</span></a>
+<a name="497"><span class="lineNum">     497 </span><span class="lineNoCov">          0 :             if (-1 == data_handler_-&gt;file_link_init (true))</span></a>
+<a name="498"><span class="lineNum">     498 </span>            :             {  </a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :                 (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="500"><span class="lineNum">     500 </span><span class="lineNoCov">          0 :                 return ;</span></a>
+<a name="501"><span class="lineNum">     501 </span>            :             }</a>
+<a name="502"><span class="lineNum">     502 </span><span class="lineNoCov">          0 :             if (-1 == make_data_connection()) {</span></a>
+<a name="503"><span class="lineNum">     503 </span><span class="lineNoCov">          0 :                 (this-&gt;*func_to_send_response_)(COMMAND_425_DATA_CONN_FAILED);</span></a>
+<a name="504"><span class="lineNum">     504 </span><span class="lineNoCov">          0 :                 return ;</span></a>
+<a name="505"><span class="lineNum">     505 </span>            :             }</a>
+<a name="506"><span class="lineNum">     506 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_150_CONNECT_READY);</span></a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineNoCov">          0 :             if (-1 == data_handler_-&gt;send_file())</span></a>
+<a name="508"><span class="lineNum">     508 </span>            :             {</a>
+<a name="509"><span class="lineNum">     509 </span><span class="lineNoCov">          0 :                 ACE_DEBUG ( (LM_DEBUG, &quot;send file failed\n&quot;));</span></a>
+<a name="510"><span class="lineNum">     510 </span><span class="lineNoCov">          0 :                 (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 :                 return ;</span></a>
+<a name="512"><span class="lineNum">     512 </span>            :             }</a>
+<a name="513"><span class="lineNum">     513 </span><span class="lineNoCov">          0 :             data_handler_.reset ();</span></a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_SUCCESS);</span></a>
+<a name="515"><span class="lineNum">     515 </span>            :             //TODO time_of_last_command</a>
+<a name="516"><span class="lineNum">     516 </span><span class="lineNoCov">          0 :             return;</span></a>
+<a name="517"><span class="lineNum">     517 </span>            :         } else {</a>
+<a name="518"><span class="lineNum">     518 </span><span class="lineNoCov">          0 :             return;</span></a>
+<a name="519"><span class="lineNum">     519 </span>            :         }</a>
+<a name="520"><span class="lineNum">     520 </span>            :         </a>
+<a name="521"><span class="lineNum">     521 </span><span class="lineNoCov">          0 :     }</span></a>
+<a name="522"><span class="lineNum">     522 </span>            : </a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineCov">          2 :     void Command_Handler::handle_stor(const cmd_info_&amp; cmds) {</span></a>
+<a name="524"><span class="lineNum">     524 </span>            :         //获取想要下载到的路径</a>
+<a name="525"><span class="lineNum">     525 </span>            :         //初始化数据连接</a>
+<a name="526"><span class="lineNum">     526 </span>            :         //发送数据流</a>
+<a name="527"><span class="lineNum">     527 </span>            :         //建立文件，并将接收到的信息填充至文件</a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="529"><span class="lineNum">     529 </span><span class="lineCov">          2 :         std::string new_path = std::string(cmds.buf + cmds.para_start);</span></a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineCov">          2 :         if(!data_handler_ || GET_REAL_PATH_FAILED == get_real_path(new_path)) {</span></a>
+<a name="531"><span class="lineNum">     531 </span><span class="lineCov">          2 :             ACE_DEBUG ((LM_DEBUG, &quot;data link not set.\n&quot;));</span></a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineCov">          2 :             (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineCov">          2 :             return ;</span></a>
+<a name="534"><span class="lineNum">     534 </span>            :         }</a>
+<a name="535"><span class="lineNum">     535 </span><span class="lineNoCov">          0 :         new_path.pop_back();</span></a>
+<a name="536"><span class="lineNum">     536 </span><span class="lineNoCov">          0 :         data_handler_-&gt;set_file_path(new_path);</span></a>
+<a name="537"><span class="lineNum">     537 </span><span class="lineNoCov">          0 :         if(data_handler_-&gt;file_link_init (false) == -1)</span></a>
+<a name="538"><span class="lineNum">     538 </span>            :         {</a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :             ACE_DEBUG ((LM_DEBUG, &quot;file link init error.\n&quot;));</span></a>
+<a name="540"><span class="lineNum">     540 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="541"><span class="lineNum">     541 </span><span class="lineNoCov">          0 :             data_handler_.reset();</span></a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 :             return ;</span></a>
+<a name="543"><span class="lineNum">     543 </span>            :         }</a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :         if (make_data_connection() == -1)</span></a>
+<a name="545"><span class="lineNum">     545 </span>            :         {</a>
+<a name="546"><span class="lineNum">     546 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_425_DATA_CONN_FAILED);</span></a>
+<a name="547"><span class="lineNum">     547 </span><span class="lineNoCov">          0 :             data_handler_.reset ();</span></a>
+<a name="548"><span class="lineNum">     548 </span><span class="lineNoCov">          0 :             return ;</span></a>
+<a name="549"><span class="lineNum">     549 </span>            :         }</a>
+<a name="550"><span class="lineNum">     550 </span><span class="lineNoCov">          0 :         (this-&gt;*func_to_send_response_)(COMMAND_150_CONNECT_READY);</span></a>
+<a name="551"><span class="lineNum">     551 </span>            : </a>
+<a name="552"><span class="lineNum">     552 </span><span class="lineNoCov">          0 :         if (data_handler_-&gt;recv_file() == -1)</span></a>
+<a name="553"><span class="lineNum">     553 </span>            :         {</a>
+<a name="554"><span class="lineNum">     554 </span><span class="lineNoCov">          0 :             ACE_DEBUG ( (LM_DEBUG, &quot;recv file failed\n&quot;));</span></a>
+<a name="555"><span class="lineNum">     555 </span><span class="lineNoCov">          0 :             (this-&gt;*func_to_send_response_)(COMMAND_500_FAILED);</span></a>
+<a name="556"><span class="lineNum">     556 </span><span class="lineNoCov">          0 :             data_handler_.reset ();</span></a>
+<a name="557"><span class="lineNum">     557 </span><span class="lineNoCov">          0 :             return ;</span></a>
+<a name="558"><span class="lineNum">     558 </span>            :         }</a>
+<a name="559"><span class="lineNum">     559 </span><span class="lineNoCov">          0 :         data_handler_.reset ();</span></a>
+<a name="560"><span class="lineNum">     560 </span><span class="lineNoCov">          0 :         (this-&gt;*func_to_send_response_)(COMMAND_SUCCESS);</span></a>
+<a name="561"><span class="lineNum">     561 </span><span class="lineNoCov">          0 :         return;</span></a>
+<a name="562"><span class="lineNum">     562 </span><span class="lineCov">          2 :     }</span></a>
+<a name="563"><span class="lineNum">     563 </span><span class="lineCov">          2 :     void Command_Handler::handle_port(const cmd_info_&amp; cmds){</span></a>
+<a name="564"><span class="lineNum">     564 </span><span class="lineCov">          2 :         CHECK_LOGGING();</span></a>
+<a name="565"><span class="lineNum">     565 </span><span class="lineCov">          4 :         std::istringstream param(cmds.buf + cmds.para_start);</span></a>
+<a name="566"><span class="lineNum">     566 </span>            :         int h1, h2, h3, h4, p1, p2;</a>
+<a name="567"><span class="lineNum">     567 </span>            :         char comma;</a>
+<a name="568"><span class="lineNum">     568 </span><span class="lineCov">          2 :         param &gt;&gt; h1 &gt;&gt; comma &gt;&gt; h2 &gt;&gt; comma &gt;&gt; h3 &gt;&gt; comma &gt;&gt; h4 </span></a>
+<a name="569"><span class="lineNum">     569 </span><span class="lineCov">          2 :             &gt;&gt; comma &gt;&gt; p1 &gt;&gt; comma &gt;&gt; p2;</span></a>
+<a name="570"><span class="lineNum">     570 </span><span class="lineCov">          2 :         int port = (p1 &lt;&lt; 8) + p2;</span></a>
+<a name="571"><span class="lineNum">     571 </span><span class="lineCov">          2 :         std::stringstream ss;</span></a>
+<a name="572"><span class="lineNum">     572 </span><span class="lineCov">          2 :         ss &lt;&lt; h1 &lt;&lt; '.' &lt;&lt; h2 &lt;&lt; '.' &lt;&lt; h3 &lt;&lt; '.' &lt;&lt; h4;</span></a>
+<a name="573"><span class="lineNum">     573 </span><span class="lineCov">          2 :         std::string ip_addr = ss.str ();</span></a>
+<a name="574"><span class="lineNum">     574 </span>            : </a>
+<a name="575"><span class="lineNum">     575 </span><span class="lineCov">          2 :         if(is_pasv_) {</span></a>
+<a name="576"><span class="lineNum">     576 </span><span class="lineNoCov">          0 :             pasv_acceptor_.close();</span></a>
+<a name="577"><span class="lineNum">     577 </span><span class="lineNoCov">          0 :             is_pasv_ = false;</span></a>
+<a name="578"><span class="lineNum">     578 </span>            :         }</a>
+<a name="579"><span class="lineNum">     579 </span>            : </a>
+<a name="580"><span class="lineNum">     580 </span><span class="lineCov">          2 :         if(data_handler_) {</span></a>
+<a name="581"><span class="lineNum">     581 </span><span class="lineNoCov">          0 :             data_handler_.reset();</span></a>
+<a name="582"><span class="lineNum">     582 </span>            :         }</a>
+<a name="583"><span class="lineNum">     583 </span><span class="lineCov">          2 :         data_handler_ = std::unique_ptr&lt;Data_Handler&gt; (new Data_Handler(ip_addr, port, data_type_));</span></a>
+<a name="584"><span class="lineNum">     584 </span><span class="lineCov">          2 :         (this-&gt;*func_to_send_response_)(COMMAND_SUCCESS);</span></a>
+<a name="585"><span class="lineNum">     585 </span><span class="lineCov">          2 :         return ;</span></a>
+<a name="586"><span class="lineNum">     586 </span><span class="lineCov">          2 :     }</span></a>
+<a name="587"><span class="lineNum">     587 </span><span class="lineNoCov">          0 :     ACE_HANDLE Command_Handler::get_handle(void) const {</span></a>
+<a name="588"><span class="lineNum">     588 </span><span class="lineNoCov">          0 :         return this-&gt;peer().get_handle();</span></a>
+<a name="589"><span class="lineNum">     589 </span>            :     }</a>
+<a name="590"><span class="lineNum">     590 </span><span class="lineNoCov">          0 :     int Command_Handler::open(void *p) {</span></a>
+<a name="591"><span class="lineNum">     591 </span><span class="lineNoCov">          0 :         if (super::open (p) == -1) {</span></a>
+<a name="592"><span class="lineNum">     592 </span><span class="lineNoCov">          0 :             return -1;</span></a>
+<a name="593"><span class="lineNum">     593 </span>            :         }</a>
+<a name="594"><span class="lineNum">     594 </span>            :         ACE_TCHAR peer_name[MAXHOSTNAMELEN];</a>
+<a name="595"><span class="lineNum">     595 </span><span class="lineNoCov">          0 :         ACE_INET_Addr peer_addr;</span></a>
+<a name="596"><span class="lineNum">     596 </span><span class="lineNoCov">          0 :         if (this-&gt;peer ().get_remote_addr (peer_addr) == 0 &amp;&amp; peer_addr.addr_to_string (peer_name, MAXHOSTNAMELEN) == 0)</span></a>
+<a name="597"><span class="lineNum">     597 </span>            :         {</a>
+<a name="598"><span class="lineNum">     598 </span><span class="lineNoCov">          0 :             ACE_DEBUG ((LM_DEBUG,  ACE_TEXT (&quot;Connection from %s\n&quot;), peer_name));</span></a>
+<a name="599"><span class="lineNum">     599 </span><span class="lineNoCov">          0 :             char msg[] = COMMAND_220;</span></a>
+<a name="600"><span class="lineNum">     600 </span><span class="lineNoCov">          0 :             this-&gt;peer().send(msg, strlen(msg));</span></a>
+<a name="601"><span class="lineNum">     601 </span><span class="lineNoCov">          0 :             ACE_DEBUG ((LM_DEBUG,  ACE_TEXT (&quot;send response: %*s&quot;), strlen(msg) - 2, msg));</span></a>
+<a name="602"><span class="lineNum">     602 </span>            :         }</a>
+<a name="603"><span class="lineNum">     603 </span>            :         </a>
+<a name="604"><span class="lineNum">     604 </span><span class="lineNoCov">          0 :         return 0;</span></a>
+<a name="605"><span class="lineNum">     605 </span><span class="lineNoCov">          0 :     }</span></a>
+<a name="606"><span class="lineNum">     606 </span><span class="lineCov">          6 :     int Command_Handler::parse_line(cmd_info_&amp; cmds) { //cmd_end 为开区间，表示命令的最后一个字符的位置+1, para_start为参数的第一个字符位置（闭区间）</span></a>
+<a name="607"><span class="lineNum">     607 </span><span class="lineCov">          6 :         char* ptr = strchr(cmds.buf, '\r');</span></a>
+<a name="608"><span class="lineNum">     608 </span><span class="lineCov">          6 :         if(nullptr == ptr || *(ptr + 1) != '\n') {</span></a>
+<a name="609"><span class="lineNum">     609 </span><span class="lineCov">          2 :             cmds.len = 0, cmds.cmd_end = -1, cmds.para_start = -1, cmds.buf[0] = 0;</span></a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineCov">          2 :             return PARSE_LINE_ERROR;</span></a>
+<a name="611"><span class="lineNum">     611 </span>            :         }</a>
+<a name="612"><span class="lineNum">     612 </span><span class="lineCov">          4 :         *ptr = 0;</span></a>
+<a name="613"><span class="lineNum">     613 </span><span class="lineCov">          4 :         cmds.len = ptr - cmds.buf;</span></a>
+<a name="614"><span class="lineNum">     614 </span><span class="lineCov">          4 :         ptr = strchr(cmds.buf, ' ');</span></a>
+<a name="615"><span class="lineNum">     615 </span><span class="lineCov">          4 :         if(nullptr != ptr) {</span></a>
+<a name="616"><span class="lineNum">     616 </span><span class="lineCov">          4 :             cmds.cmd_end = ptr - cmds.buf;</span></a>
+<a name="617"><span class="lineNum">     617 </span><span class="lineCov">         10 :             while(ptr &lt; cmds.buf + cmds.len &amp;&amp; *ptr == ' '){</span></a>
+<a name="618"><span class="lineNum">     618 </span><span class="lineCov">          6 :                 *ptr = 0;</span></a>
+<a name="619"><span class="lineNum">     619 </span><span class="lineCov">          6 :                 ptr++;</span></a>
+<a name="620"><span class="lineNum">     620 </span>            :             }</a>
+<a name="621"><span class="lineNum">     621 </span><span class="lineCov">          4 :             if(ptr &lt; cmds.buf + cmds.len) {</span></a>
+<a name="622"><span class="lineNum">     622 </span><span class="lineCov">          2 :                 cmds.para_start = ptr - cmds.buf;</span></a>
+<a name="623"><span class="lineNum">     623 </span><span class="lineCov">          2 :                 return PARSE_LINE_OK_CMD_AND_PARA;</span></a>
+<a name="624"><span class="lineNum">     624 </span>            :             } </a>
+<a name="625"><span class="lineNum">     625 </span><span class="lineCov">          2 :             *(cmds.buf + cmds.cmd_end) = 0;</span></a>
+<a name="626"><span class="lineNum">     626 </span><span class="lineCov">          2 :             cmds.len = cmds.cmd_end;</span></a>
+<a name="627"><span class="lineNum">     627 </span>            :         } else{</a>
+<a name="628"><span class="lineNum">     628 </span><span class="lineNoCov">          0 :             cmds.cmd_end = cmds.len;</span></a>
+<a name="629"><span class="lineNum">     629 </span>            :         }</a>
+<a name="630"><span class="lineNum">     630 </span><span class="lineCov">          2 :         cmds.para_start = -1;</span></a>
+<a name="631"><span class="lineNum">     631 </span><span class="lineCov">          2 :         return PARSE_LINE_OK_ONLY_CMD;</span></a>
+<a name="632"><span class="lineNum">     632 </span>            :         </a>
+<a name="633"><span class="lineNum">     633 </span>            :     }</a>
+<a name="634"><span class="lineNum">     634 </span>            :     // typedef void (*Handle_Func)(const MyFtpServer::cmd_info_ &amp;cmds);</a>
+<a name="635"><span class="lineNum">     635 </span>            :     </a>
+<a name="636"><span class="lineNum">     636 </span><span class="lineCov">          4 :     Handle_Func Command_Handler::process_cmd(const cmd_info_&amp; cmds) {</span></a>
+<a name="637"><span class="lineNum">     637 </span><span class="lineCov">          4 :         std::string cmd_s = std::string(cmds.buf, cmds.cmd_end);</span></a>
+<a name="638"><span class="lineNum">     638 </span><span class="lineCov">          4 :         std::transform(cmd_s.begin(), cmd_s.end(), cmd_s.begin(), ::tolower);</span></a>
+<a name="639"><span class="lineNum">     639 </span><span class="lineCov">          4 :         auto iter = handle_cmd_map.find(cmd_s);</span></a>
+<a name="640"><span class="lineNum">     640 </span><span class="lineCov">          4 :         if(iter == handle_cmd_map.end()){ //未识别命令</span></a>
+<a name="641"><span class="lineNum">     641 </span><span class="lineCov">          2 :             return nullptr;</span></a>
+<a name="642"><span class="lineNum">     642 </span>            :         }</a>
+<a name="643"><span class="lineNum">     643 </span><span class="lineCov">          2 :         return iter-&gt;second;</span></a>
+<a name="644"><span class="lineNum">     644 </span><span class="lineCov">          4 :     }</span></a>
+<a name="645"><span class="lineNum">     645 </span>            : </a>
+<a name="646"><span class="lineNum">     646 </span><span class="lineNoCov">          0 :     int Command_Handler::handle_input (ACE_HANDLE)</span></a>
+<a name="647"><span class="lineNum">     647 </span>            :     {</a>
+<a name="648"><span class="lineNum">     648 </span>            :         </a>
+<a name="649"><span class="lineNum">     649 </span><span class="lineNoCov">          0 :         char buf[BUFSIZ] = {0};</span></a>
+<a name="650"><span class="lineNum">     650 </span><span class="lineNoCov">          0 :         ACE_INET_Addr from_addr;</span></a>
+<a name="651"><span class="lineNum">     651 </span>            :         // ACE_DEBUG((LM_DEBUG, &quot;(%P|%t) activity occurred on handle %d!\n&quot;, this-&gt;peer().get_handle()));</a>
+<a name="652"><span class="lineNum">     652 </span><span class="lineNoCov">          0 :         ssize_t n = this-&gt;peer().recv(buf, sizeof buf);</span></a>
+<a name="653"><span class="lineNum">     653 </span><span class="lineNoCov">          0 :         if(-1 == n) { </span></a>
+<a name="654"><span class="lineNum">     654 </span><span class="lineNoCov">          0 :             ACE_ERROR((LM_ERROR, &quot;%p/n&quot;, &quot;handle_input&quot;));</span></a>
+<a name="655"><span class="lineNum">     655 </span>            :         } </a>
+<a name="656"><span class="lineNum">     656 </span><span class="lineNoCov">          0 :         else if (0 == n) {</span></a>
+<a name="657"><span class="lineNum">     657 </span><span class="lineNoCov">          0 :             return 0;</span></a>
+<a name="658"><span class="lineNum">     658 </span>            :         } </a>
+<a name="659"><span class="lineNum">     659 </span>            :         else {</a>
+<a name="660"><span class="lineNum">     660 </span><span class="lineNoCov">          0 :             cmd_info_ cmds = {buf, 0, 0, 0};</span></a>
+<a name="661"><span class="lineNum">     661 </span><span class="lineNoCov">          0 :             int result = parse_line(cmds);</span></a>
+<a name="662"><span class="lineNum">     662 </span><span class="lineNoCov">          0 :             if(PARSE_LINE_ERROR == result) {</span></a>
+<a name="663"><span class="lineNum">     663 </span><span class="lineNoCov">          0 :                 ACE_OS::memset(buf, 0, BUFSIZ); //清空</span></a>
+<a name="664"><span class="lineNum">     664 </span><span class="lineNoCov">          0 :                 ACE_DEBUG((LM_ERROR, &quot;parse line error\n&quot;));</span></a>
+<a name="665"><span class="lineNum">     665 </span><span class="lineNoCov">          0 :                 return 0;</span></a>
+<a name="666"><span class="lineNum">     666 </span>            :             }</a>
+<a name="667"><span class="lineNum">     667 </span><span class="lineNoCov">          0 :             if(PARSE_LINE_OK_ONLY_CMD == result || PARSE_LINE_OK_CMD_AND_PARA == result) {</span></a>
+<a name="668"><span class="lineNum">     668 </span>            :                 // ACE_DEBUG((LM_DEBUG, &quot;parse line finish, get cmd= %*s\n&quot;,cmds.len, buf));</a>
+<a name="669"><span class="lineNum">     669 </span><span class="lineNoCov">          0 :                 auto func = process_cmd(cmds);</span></a>
+<a name="670"><span class="lineNum">     670 </span><span class="lineNoCov">          0 :                 if(nullptr == func) {</span></a>
+<a name="671"><span class="lineNum">     671 </span><span class="lineNoCov">          0 :                     (this-&gt;*func_to_send_response_)(COMMAND_550_NOT_SUPPORT);</span></a>
+<a name="672"><span class="lineNum">     672 </span>            :                 }</a>
+<a name="673"><span class="lineNum">     673 </span>            :                 else {</a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineNoCov">          0 :                     (this-&gt;*func)(cmds);</span></a>
+<a name="675"><span class="lineNum">     675 </span>            :                 }</a>
+<a name="676"><span class="lineNum">     676 </span>            :                 </a>
+<a name="677"><span class="lineNum">     677 </span>            :             }</a>
+<a name="678"><span class="lineNum">     678 </span>            :             // if(PARSE_LINE_OK_CMD_AND_PARA == result) {</a>
+<a name="679"><span class="lineNum">     679 </span>            :             //     ACE_DEBUG((LM_DEBUG, &quot;parse line finish, get cmd= %*s, para=%s\n&quot;,cmds.cmd_end, buf, buf + cmds.para_start));</a>
+<a name="680"><span class="lineNum">     680 </span>            :             //     (this-&gt;*process_cmd(cmds))(cmds);</a>
+<a name="681"><span class="lineNum">     681 </span>            :             // }</a>
+<a name="682"><span class="lineNum">     682 </span>            :             </a>
+<a name="683"><span class="lineNum">     683 </span>            :             // char msg[] = &quot;230 Login successful.\r\n&quot;;</a>
+<a name="684"><span class="lineNum">     684 </span>            :             // this-&gt;peer().send(msg, strlen(msg));</a>
+<a name="685"><span class="lineNum">     685 </span>            :             // ACE_Message_Block *mb = NULL;</a>
+<a name="686"><span class="lineNum">     686 </span>            :             // ACE_NEW_RETURN(mb, ACE_Message_Block(n, ACE_Message_Block::MB_DATA, 0, buf), -1);</a>
+<a name="687"><span class="lineNum">     687 </span>            :             // mb-&gt;wr_ptr(n);</a>
+<a name="688"><span class="lineNum">     688 </span>            :             // task_mgr.putq(mb);</a>
+<a name="689"><span class="lineNum">     689 </span>            :         }</a>
+<a name="690"><span class="lineNum">     690 </span><span class="lineNoCov">          0 :         return 0;</span></a>
+<a name="691"><span class="lineNum">     691 </span><span class="lineNoCov">          0 :     }</span></a>
+<a name="692"><span class="lineNum">     692 </span><span class="lineNoCov">          0 :     int Command_Handler::handle_close (ACE_HANDLE h, ACE_Reactor_Mask mask)</span></a>
+<a name="693"><span class="lineNum">     693 </span>            :     {</a>
+<a name="694"><span class="lineNum">     694 </span><span class="lineNoCov">          0 :         return super::handle_close (h, mask);</span></a>
+<a name="695"><span class="lineNum">     695 </span>            :     }</a>
+<a name="696"><span class="lineNum">     696 </span>            : </a>
+<a name="697"><span class="lineNum">     697 </span>            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
